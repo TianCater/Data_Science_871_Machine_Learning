@@ -1,0 +1,154 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, Packages}
+
+library(pacman)
+pacman::p_load(quantmod, ggplot2, forecast, tseries, rugarch, prophet, tsfknn, fmxdat, tidyverse,tbl2xts)
+
+```
+
+```{r, Importing the data}
+
+
+JSE_TOP40 <-  fmxdat::SA_Indexes |> filter(ShareName=="JSE Top 40 Index Total Return Value") #daily (excl weekends) data  2002-06-21 to 2020-07-31. NB, how to handle the empty weekend spots??
+
+JSE_Top40_xts <- tbl_xts(JSE_TOP40)
+
+```
+
+```{r, IFF OTHER SERIES ARE CONSIDERED}
+
+fmxdat::SA_Indexes |> group_by(Tickers, ShareName) |> summarise() #use to see which indexes to include. Current idea is to compare the  
+```
+
+```{r, Visualise the Series}
+
+chartSeries(JSE_Top40_xts,TA=c(addMACD()))
+
+```
+
+# Forecasting using the Prophet Algorithm
+
+```{r, Prophet Forecasting}
+#Prophet Forecasting
+#Use data frame format instead of xts data format
+
+JSE_TOP40_df <-  data.frame(ds=index(JSE_Top40_xts), y=as.numeric(JSE_Top40_xts$Price))
+
+prediction_prophet <- prophet(JSE_TOP40_df)
+
+future_df <-  make_future_dataframe(prediction_prophet,periods=500)
+
+forecast_prophet <-  predict(prediction_prophet,future_df)
+
+
+```
+
+```{r, Train predictions}
+#Generating the data set based on trained predictions and compare the prophet predictions to the actual observations
+
+predicted_df <-  data.frame(forecast_prophet$ds,forecast_prophet$yhat)
+
+length_of_train <-  length(JSE_Top40_xts$Price)
+
+predicted_train_df <-  predicted_df[c(1:length_of_train),]
+
+
+```
+
+```{r, Visualise Train Prediction vs Observed Data}
+#Visualizing train prediction vs real data
+g <- ggplot()+
+  geom_smooth(aes(x= predicted_train_df$forecast_prophet.ds , y= JSE_Top40_xts$Price),
+              colour="blue", level=0.99, fill="#69b3a2", se=T) +
+  geom_point(aes(x= predicted_train_df$forecast_prophet.ds ,y=predicted_train_df$forecast_prophet.yhat), size = 0.3, colour="black")+
+    labs(x = "Date",
+         y = "Total Index Return",
+         color = "Legend") +     ## Notice that this graph can be improved apon severely by including legends
+    scale_color_manual(values = colors)+
+  ggtitle("Prophet: Training Prediction vs. Real Data")
+g
+
+
+```
+
+
+```{r, Cross Validation}
+#Here we investigate the accuracy of the predictions with cross validation
+
+accuracy_of_forecast<- accuracy(predicted_train_df$forecast_prophet.yhat,JSE_TOP40_df$y)
+
+detrended_forecasts <- prophet_plot_components(prediction_prophet,forecast_prophet) #To have a clearer understanding of the data generating process, I plot the forecasted prophet components divided by a trend component, weekly seasonality and yearly seasonality.
+
+
+```
+
+# The K-Nearest Neighbors (KNN) Algorithm 
+
+```{r, KNN Prediction}
+
+# Remember here to justify the selection of the k-value, the lags, as well as the msas. # Do so by comparing the RMSE, MAE, and the MAPE values for different specifications. 
+
+KNN_prediction <- knn_forecasting(JSE_TOP40_df$y, h = 500 , lags = 1:30, k = 30, msas = "MIMO" ) 
+
+#'h is the number of values to forecast'. 'k' is the parameter in the KNN regression. 'lags' is the order of lags used in the AR process. 'msas' is a string indicating the Multiple-Step Ahead Strategy used when more than one value is predicted. It can be "recursive" or "MIMO" (the default). 
+
+#Accuracy of the model's training  set 
+
+rolling_origin <- rolling_origin(KNN_prediction)
+
+print(rolling_origin$global_accu)  # Provides the RMSE, MAE and the MAPE
+
+autoplot(KNN_prediction)
+
+```
+
+# The Feed-forward Neural Network (FNN)
+
+"A feed-forward neural network (FNN) is an artificial neural network wherein connections between the nodes do not form a cycle. As such, it is different from its descendant: recurrent neural networks.
+
+The feed-forward neural network was the first and simplest type of artificial neural network devised. In this network, the information moves in only one direction—forward—from the input nodes, through the hidden nodes (if any) and to the output nodes. There are no cycles or loops in the network "
+
+
+```{r, Neural Net AR Prediction}
+
+#Fitting  the nnetar
+
+Lambda = BoxCox.lambda(JSE_Top40_xts$Price) 
+
+# I select the specific number of hidden nodes is half of the number of input nodes (including external regressors, if given) plus 1.
+# To ensure that the residuals will be approximately homoscedastic, a Box Cox lambda is approach is applied. I forecast the next 500 values with the neural net fitted. I then proceed to apply the nnetar function with the lambda assigned as parameters.
+
+FNN_fit = nnetar(JSE_Top40_xts$Price,lambda=Lambda)
+
+FNN_fit # See the output results 
+
+```
+
+```{r, Visualise FNN Forecast}
+
+# NB- avoid running code over and over as computing time is rather strenuous. 
+
+FNN_forecast <-  forecast(FNN_fit,PI=T,h=500) # Forecast 500 periods (week days) ahead as in previous predictions.
+  
+autoplot(FNN_forecast) # A completely opposite result to KNN forecast. 
+
+```
+
+```{r, Accuracy of FNN Forecast}
+
+accuracy(FNN_fit) # Interpreting the forecasts. 
+
+```
+
+
+
+
