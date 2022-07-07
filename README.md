@@ -1,43 +1,30 @@
-``` r
-library(pacman)
-pacman::p_load(quantmod, ggplot2, forecast, tseries, rugarch, prophet, tsfknn, fmxdat, tidyverse,tbl2xts)
-```
+# Purpose
 
-``` r
-JSE_TOP40 <-  fmxdat::SA_Indexes |> filter(ShareName=="JSE Top 40 Index Total Return Value") #daily (excl weekends) data  2002-06-21 to 2020-07-31. NB, how to handle the empty weekend spots??
+Predicting future outcomes based on historical data is known as a
+forecasting algorithm. Accordingly, this project implements Facebook’s
+Prophet, the K-Nearest Neighbours (KNN), and the Feed-forward Neural
+Network (FNN) algorithms to predict the movement in value of the
+Johannesburg Stock Exchange’s (JSE) Top 40 Index. Importantly, these
+predictions are not aimed at analysing stock price movements to provide
+investor insights. Instead, the purpose is to show the models fitted,
+compare the different forecasting approaches, and encourage their use.
 
-JSE_Top40_xts <- tbl_xts(JSE_TOP40)
-```
+Since the outset of financial markets, investor’s have been attempting
+to predict market trends and random behaviour. However, as indicated by
+some of the most formidable market investors, predicting stock market
+returns is almost impossible. However, all improving techniques
+surrounding machine learning and its implications for forecasting time
+series might someday provide more robust stock market predictions. It is
+in investigating some of these machine learning techniques that give
+inclination to this project.
 
-``` r
-fmxdat::SA_Indexes |> group_by(Tickers, ShareName) |> summarise() #use to see which indexes to include. Current idea is to compare the  
-```
-
-    ## `summarise()` has grouped output by 'Tickers'. You can override using the
-    ## `.groups` argument.
-
-    ## # A tibble: 18 x 2
-    ## # Groups:   Tickers [18]
-    ##    Tickers        ShareName                                                     
-    ##    <chr>          <chr>                                                         
-    ##  1 FINI15TR Index FTSE/JSE Africa Financials 15 Index Total Return Value        
-    ##  2 INDI25TR Index FTSE/JSE Africa Industrials 25 Index Total Return Value       
-    ##  3 J205LCTR Index FTSE/JSE Large Cap Total Return Index                         
-    ##  4 J430TR Index   FTSE/JSE Cap SWIXTop40 Total Return Value                     
-    ##  5 J433TR Index   FTSE/JSE Africa SWIX All Share Index Capped Total Return Value
-    ##  6 JALSHTR Index  FTSE/JSE Africa All Share Index Total Return Value            
-    ##  7 JCAP40TR Index JSE Capped Top 40 Index Total Return Value                    
-    ##  8 JGROWTR Index  FTSE/JSE All Share Style Growth Total Return Index            
-    ##  9 JMOTETR Index  FTSE/JSE Africa Mobile Telecommunications Total Return Index  
-    ## 10 JNCCGTR Index  FTSE/JSE Africa Health Care Total Return Index                
-    ## 11 JSAPYTR Index  FTSE/JSE Africa Property Index Total Return Value             
-    ## 12 JSHR40TR Index JSE Shareholder Weighted Top 40 Index Total Return Value      
-    ## 13 JSHRALTR Index FTSE/JSE Africa SWIX All Share Index Total Return Value       
-    ## 14 JSMLCTR Index  FTSE/JSE Africa Small Cap Index                               
-    ## 15 JVALUTR Index  FTSE/JSE All Share Style Value Total Return Index             
-    ## 16 MIDCAPTR Index JSE Mid Cap Index Total Return                                
-    ## 17 RESI20TR Index FTSE/JSE Africa Resource 10 Index Total Return Value          
-    ## 18 TOP40TR Index  JSE Top 40 Index Total Return Value
+All the models performed very well inside the prediction intervals and
+the accuracy metrics, with the FNN algorithm displaying the most
+accurate predictions. The KNN model did not serve as well as the Prophet
+and FNN models under our metrics. This could be because KNN may need
+more tuning phases, training, and testing approaches, or they are not as
+effective as the other models because they mainly use classificatory
+terms more than forecasting.
 
 ``` r
 chartSeries(JSE_Top40_xts,TA=c(addMACD()))
@@ -46,6 +33,26 @@ chartSeries(JSE_Top40_xts,TA=c(addMACD()))
 ![](README_files/figure-markdown_github/Visualise%20the%20Series-1.png)
 
 # Forecasting using the Prophet Algorithm
+
+The Prophet model is an additive regression model developed by
+@taylor2018 at Facebook’s Core Data Science team, providing an effective
+solution to forecast time series with trending and seasonal properties.
+The model consists of four main components: A logistic growth curve or
+piecewise linear trend (*g*(*t*)), a yearly seasonal element using a
+Fourier series (*s*(*t*)), a weekly seasonal part using dummy variables,
+and the effects of holidays or significant events (*h*(*t*)).
+
+Figure compares the actual data versus the predicted values fitted using
+a piecewise linear trend and forecasting 500 observations in advance.
+Additionally, the number of lags are selected based on the Akeike
+Information Criteria (AIC). Visually, the predicted values seem to do
+the actual data rather well. However, to better understand the data
+generating process, the expected prophet components divided by a trend
+component, weekly seasonality and yearly seasonality are depicted in
+figure . Outside of the apparent weekly seasonality due to markets being
+closed on weekends, the predicted values show higher volatility during
+the year’s first quarter. This evidence makes sense as most companies in
+the JSE Top 40 index have their financial year-end during this period.
 
 ``` r
 #Prophet Forecasting
@@ -94,6 +101,10 @@ g
 
 ![](README_files/figure-markdown_github/Visualise%20Train%20Prediction%20vs%20Observed%20Data-1.png)
 
+Finally, to better understand the dataset, we can plot our prophet
+components divided by a trend component, weekly seasonality and yearly
+seasonality.
+
 ``` r
 #Here we investigate the accuracy of the predictions with cross validation
 
@@ -105,6 +116,22 @@ detrended_forecasts <- prophet_plot_components(prediction_prophet,forecast_proph
 ![](README_files/figure-markdown_github/Cross%20Validation-1.png)
 
 # The K-Nearest Neighbors (KNN) Algorithm
+
+The K-Nearest Neighbours (KNN) algorithm is a supervised machine
+learning algorithm. The algorithm applies a method of classifying data
+to estimate the likelihood that a data point will become a member of one
+group or another depending on the group to which the data points nearest
+to it belong (the training set). In this section, our primary objective
+is to forecast values for the JSE Top 40 index through a KNN
+experimental approach and compare its forecast accuracy with the other
+models adopted.
+
+The following 500 values forecasted are shown in figure . The number of
+parameters in the KNN regression is set to 100 because this project
+focuses on comparing different projection models rather than deducing
+the actual movement of stock prices. Furthermore, the lags are selected
+based on the AIC, and recursive methods are applied as the multiple-step
+ahead strategy.
 
 ``` r
 # Remember here to justify the selection of the k-value, the lags, as well as the msas. # Do so by comparing the RMSE, MAE, and the MAPE values for different specifications. 
@@ -124,22 +151,43 @@ print(rolling_origin$global_accu)  # Provides the RMSE, MAE and the MAPE
     ## 662.68875 481.60708   6.94695
 
 ``` r
-autoplot(KNN_prediction)
+autoplot(KNN_prediction) +
+    labs(x = "Time", y = "Total Index Return")
 ```
 
 ![](README_files/figure-markdown_github/KNN%20Prediction-1.png)
 
+The forecasts depicted in figure indicate that the JSE Top 40 index will
+experience growth, with a marginally slight decline after two months
+that recovers rather quickly towards its stable growth path. The
+statistics that measure the accuracy of the prediction are given in
+table below. Again, referring to the MAPE value of 6.95%, the
+projections fit the actual data sufficiently, with a 6.95% error between
+the predicted and actual values. However, this is a slightly worse fit
+than the predictions computed using the Prophet algorithm.
+
 # The Feed-forward Neural Network (FNN)
 
-“A feed-forward neural network (FNN) is an artificial neural network
-wherein connections between the nodes do not form a cycle. As such, it
-is different from its descendant: recurrent neural networks.
+A single hidden layer feed-forward neural network (FNN) is the first and
+most straightforward kind of artificial neural network where connections
+between nodes do not form a loop or cycle. Consequently, the information
+only flows forward from the input nodes through the hidden nodes and to
+the output nodes. In its form considered here, only one layer of input
+nodes transmits weighted inputs to the next layer of receiving nodes.
 
-The feed-forward neural network was the first and simplest type of
-artificial neural network devised. In this network, the information
-moves in only one direction—forward—from the input nodes, through the
-hidden nodes (if any) and to the output nodes. There are no cycles or
-loops in the network ”
+This section fits a single hidden layer FNN to the JSE Top 40 time
+series. The functional model approach involves using lagged values of
+the process as the input data, resulting in an estimated non-linear
+autoregressive model.
+
+The specific number of hidden nodes is half the number of input nodes,
+including external independent variables, plus one. To ensure that the
+residuals will be approximately homoscedastic, the Box-Cox lambda
+approach is used. In figure , the following 500 values are forecasted
+with the neural net fitted and the number of lags selected based on the
+AIC. In contrast to the Prophet and KNN predictions, figure predicts
+that the JSE Top 40 index will experience a sharp decline until
+levelling off approximately three months later.
 
 ``` r
 #Fitting  the nnetar
@@ -167,9 +215,10 @@ FNN_fit # See the output results
 ``` r
 # NB- avoid running code over and over as computing time is rather strenuous. 
 
-FNN_forecast <-  forecast(FNN_fit,PI=T,h=500) # Forecast 500 periods (week days) ahead as in previous predictions.
+FNN_forecast <-  forecast(FNN_fit,PI=T,h=30) # Forecast 500 periods (week days) ahead as in previous predictions.
   
-autoplot(FNN_forecast) # A completely opposite result to KNN forecast. 
+autoplot(FNN_forecast)+
+    labs(x = "Time", y = "Total Index Return", title = "") # A completely opposite result to KNN forecast. 
 ```
 
 ![](README_files/figure-markdown_github/Visualise%20FNN%20Forecast-1.png)
@@ -178,5 +227,22 @@ autoplot(FNN_forecast) # A completely opposite result to KNN forecast.
 accuracy(FNN_fit) # Interpreting the forecasts. 
 ```
 
-    ##                    ME     RMSE     MAE          MPE    MAPE     MASE       ACF1
-    ## Training set 1.954182 55.17898 36.4821 0.0008798428 0.99617 1.047369 0.04608366
+    ##                    ME     RMSE      MAE          MPE      MAPE    MASE
+    ## Training set 1.627182 55.17527 36.49258 0.0005231149 0.9968305 1.04767
+    ##                    ACF1
+    ## Training set 0.04633823
+
+# Conclusion
+
+This study focused on applying different models, learning how to use
+them to forecast JSE Top 40 index values, and showcasing contrasting
+results. The Prophet and KNN algorithms predicted a price increase over
+the next 500 days, whereas the FNN algorithm a price decrease.
+
+All the models performed very well inside the prediction intervals and
+the accuracy metrics, with the FNN algorithm displaying the most
+accurate predictions. The KNN model did not serve as well as the Prophet
+and FNN models under our metrics. This could be because KNN may need
+more tuning phases, training, and testing approaches, or they are not as
+effective as the other models because they mainly use classificatory
+terms more than forecasting.

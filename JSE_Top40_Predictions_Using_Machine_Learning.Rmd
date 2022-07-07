@@ -3,7 +3,7 @@
 # Remove comments and add values where applicable.
 # The descriptions below should be self-explanatory
 
-title: "Helping You Write Academic Papers in R using Texevier"
+title: "Comparing Different Machine Learning Techniques for Stock Market Predictions."
 #subtitle: "This will appear as Right Header"
 
 documentclass: "elsarticle"
@@ -25,23 +25,23 @@ Thesis_FP: FALSE
 # --------- Front Page
 # Comment: ----- Follow this pattern for up to 5 authors
 AddTitle: TRUE # Use FALSE when submitting to peer reviewed platform. This will remove author names.
-Author1: "Nico Katzke^[__Contributions:__  \\newline _The authors would like to thank no institution for money donated to this project. Thank you sincerely._]"  # First Author - note the thanks message displayed as an italic footnote of first page.
-Ref1: "Prescient Securities, Cape Town, South Africa" # First Author's Affiliation
-Email1: "nfkatzke\\@gmail.com" # First Author's Email address
+Author1: "Tian Cater^[__Code and data:__  \\newline The code and data used in this project is readily available at https://github.com/TianCater/Data_Science_871_Machine_Learning. I would also like to thank @Texevier for this seamless integration of Latex in R.]"  # First Author - note the thanks message displayed as an italic footnote of first page.
+Ref1: "Data Science 871: Machine Learning Project" # First Author's Affiliation
+Email1: "19025831\\@sun.ac.za" # First Author's Email address
 
-Author2: "John Smith"
-Ref2: "Some other Institution, Cape Town, South Africa"
-Email2: "John\\@gmail.com"
-CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
+#Author2: "John Smith"
+#Ref2: "Some other Institution, Cape Town, South Africa"
+#Email2: "John\\@gmail.com"
+#CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
 
-Author3: "John Doe"
-Email3: "Joe\\@gmail.com"
+#Author3: "John Doe"
+#Email3: "Joe\\@gmail.com"
 
-CorrespAuthor_1: TRUE  # If corresponding author is author 3, e.g., use CorrespAuthor_3: TRUE
+CorrespAuthor_1: FALSE  # If corresponding author is author 3, e.g., use CorrespAuthor_3: TRUE
 
 # Comment out below to remove both. JEL Codes only given if keywords also given.
-keywords: "Multivariate GARCH \\sep Kalman Filter \\sep Copula" # Use \\sep to separate
-JELCodes: "L250 \\sep L100"
+#keywords: "Multivariate GARCH \\sep Kalman Filter \\sep Copula" # Use \\sep to separate
+#JELCodes: "L250 \\sep L100"
 
 # ----- Manage headers and footers:
 #BottomLFooter: $Title$
@@ -91,8 +91,7 @@ output:
     template: Tex/TexDefault.txt
     fig_width: 3.5 # Adjust default figure sizes. This can also be done in the chunks of the text.
     fig_height: 3.5
-abstract: |
-  Abstract to be written here. The abstract should not be too long and should provide the reader with a good understanding what you are writing about. Academic papers are not like novels where you keep the reader in suspense. To be effective in getting others to read your paper, be as open and concise about your findings here as possible. Ideally, upon reading your abstract, the reader should feel he / she must read your paper in entirety.
+#abstract: |
 ---
 
 <!-- First: Set your default preferences for chunk options: -->
@@ -107,12 +106,18 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width 
 
 # Lets load in example data, and see how this can be stored and later called from your 'data' folder.
 if(!require("tidyverse")) install.packages("tidyverse")
-library(tidyverse)
+library(tidyverse, pacman)
+pacman::p_load(quantmod, ggplot2, forecast, tseries, rugarch, prophet, tsfknn, fmxdat, tidyverse,tbl2xts, kableExtra)
+
 Example_data <- Texevier::Ex_Dat
 
 # Notice that as you are working in a .Rproj file (I am assuming you are) - the relative paths of your directories start at your specified root.
 # This means that when working in a .Rproj file, you never need to use getwd() - it is assumed as your base root automatically.
 write_rds(Example_data, path = "data/Example_data.rds")
+
+JSE_TOP40 <-  fmxdat::SA_Indexes |> filter(ShareName=="JSE Top 40 Index Total Return Value") #daily (excl weekends) data  2002-06-21 to 2020-07-31. NB, how to handle the empty weekend spots??
+
+JSE_Top40_xts <- tbl_xts(JSE_TOP40)
 
 ```
 
@@ -123,272 +128,171 @@ write_rds(Example_data, path = "data/Example_data.rds")
 
 # Introduction \label{Introduction}
 
-References are to be made as follows: @fama1997[p. 33] and @grinold2000 Such authors could also be referenced in brackets [@grinold2000] and together [@fama1997 \& @grinold2000]. Source the reference code from scholar.google.com by clicking on ``cite'' below article name. Then select BibTeX at the bottom of the Cite window, and proceed to copy and paste this code into your ref.bib file, located in the directory's Tex folder. Open this file in Rstudio for ease of management, else open it in your preferred Tex environment. Add and manage your article details here for simplicity - once saved, it will self-adjust in your paper.
+Predicting future outcomes based on historical data is known as a forecasting algorithm. Accordingly, this project implements Facebook's Prophet, the K-Nearest Neighbours (KNN), and the Feed-forward Neural Network (FNN) algorithms to predict the movement in value of the Johannesburg Stock Exchange's (JSE) Top 40 Index. Importantly, these predictions are not aimed at analysing stock price movements to provide investor insights. Instead, the purpose is to show the models fitted, compare the different forecasting approaches, and encourage their use.
 
-> I suggest renaming the top line after \@article, as done in the template ref.bib file, to something more intuitive for you to remember. Do not change the rest of the code. Also, be mindful of the fact that bib references from google scholar may at times be incorrect. Reference Latex forums for correct bibtex notation.
+Since the outset of financial markets, investor’s have been attempting to predict market trends and random behaviour. However, as indicated by some of the most formidable market investors, predicting stock market returns is almost impossible. However, all improving techniques surrounding machine learning and its implications for forecasting time series might someday provide more robust stock market predictions. It is in investigating some of these machine learning techniques that give inclination to this project.
 
-To reference a section, you have to set a label using ``\\label'' in R, and then reference it in-text as e.g. referencing a later section, Section \ref{Meth}.
+All the models performed very well inside the prediction intervals and the accuracy metrics, with the FNN algorithm displaying the most accurate predictions. The KNN model did not serve as well as the Prophet and FNN models under our metrics. This could be because KNN may need more tuning phases, training, and testing approaches, or they are not as effective as the other models because they mainly use classificatory terms more than forecasting.
 
-Writing in Rmarkdown is surprizingly easy - see [this website](https://www.rstudio.com/wp-content/uploads/2015/03/rmarkdown-reference.pdf) cheatsheet for a summary on writing Rmd writing tips.
+# Forecasting using the Prophet Algorithm
 
-# Data  {-}
+The Prophet model is an additive regression model developed by @taylor2018 at Facebook’s Core Data Science team, providing an effective solution to forecast time series with trending and seasonal properties. The model consists of four main components: A logistic growth curve or piecewise linear trend ($g(t)$), a yearly seasonal element using a Fourier series ($s(t)$), a weekly seasonal part using dummy variables, and the effects of holidays or significant events ($h(t)$). 
 
-Notice how I used the curly brackets and dash to remove the numbering of the data section.
+```{r, fig.cap = "The dynamics of the Prophet algorithm. \\label{image1}", out.width = "70%", fig.show = "hold", fig.align='center'}
+knitr::include_graphics("code/prophet.png")
+```
 
-Discussion of data should be thorough with a table of statistics and ideally a figure.
+Figure \ref{Prophet} compares the actual data versus the predicted values fitted using a piecewise linear trend and forecasting 500 observations in advance. Additionally, the number of lags are selected based on the Akeike Information Criteria (AIC). Visually, the predicted values seem to do the actual data rather well. However, to better understand the data generating process, the expected prophet components divided by a trend component, weekly seasonality and yearly seasonality are depicted in figure \ref{ProphetT}. Outside of the apparent weekly seasonality due to markets being closed on weekends, the predicted values show higher volatility during the year's first quarter. This evidence makes sense as most companies in the JSE Top 40 index have their financial year-end during this period.
 
-In your tempalte folder, you will find a Data and a Code folder. In order to keep your data files neat, store all of them in your Data folder. Also, I strongly suggest keeping this Rmd file for writing and executing commands, not writing out long pieces of data-wrangling. In the example below, I simply create a ggplot template for scatter plot consistency. I suggest keeping all your data in a data folder.
+```{r, Prophet Forecasting}
+#Prophet Forecasting
+#Use data frame format instead of xts data format
 
-<!-- The following is a code chunk. It must have its own unique name (after the r), or no name. After the comma follows commands for R which are self-explanatory. By default, the code and messages will not be printed in your pdf, just the output: -->
+JSE_TOP40_df <-  data.frame(ds=index(JSE_Top40_xts), y=as.numeric(JSE_Top40_xts$Price))
 
-```{r Figure1,  warning =  FALSE, fig.align = 'center', fig.cap = "Caption Here \\label{Figure1}", fig.ext = 'png', fig.height = 3, fig.width = 6}
+prediction_prophet <- prophet(JSE_TOP40_df)
 
-  # This is just a random plot to show you a plot. This is done if the getwd() does not point to your Template's directory.
-  # Set WD below to your project's working directory.
+future_df <-  make_future_dataframe(prediction_prophet,periods=500)
 
-  g <-
-  ggplot(data = mtcars) +
-  geom_point(aes(x = disp, y = hp, color = cyl)) +
-  theme_bw() +
-  # theme(legend.position = "none") +
-  theme(plot.title = element_text(size = 10)) +
-  theme(axis.title = element_text(size = 10),
-        axis.title.x = element_text()) +
-  labs(y = "y-axis", x = "x-axis", title = "Some amazing plot")
+forecast_prophet <-  predict(prediction_prophet,future_df)
 
+
+```
+
+```{r, Train predictions}
+#Generating the data set based on trained predictions and compare the prophet predictions to the actual observations
+
+predicted_df <-  data.frame(forecast_prophet$ds,forecast_prophet$yhat)
+
+length_of_train <-  length(JSE_Top40_xts$Price)
+
+predicted_train_df <-  predicted_df[c(1:length_of_train),]
+
+
+```
+
+```{r,  warning =  FALSE, fig.align = 'center', fig.cap = "Visualisation of Train Prediction (blue) vs Observed Data (black).\\label{Prophet}", fig.ext = 'png', fig.height = 3, fig.width = 5}
+
+#Visualizing train prediction vs real data
+g <- ggplot()+
+  geom_smooth(aes(x= predicted_train_df$forecast_prophet.ds , y= JSE_Top40_xts$Price),
+              colour="blue", level=0.99, fill="#69b3a2", se=T) +
+  geom_point(aes(x= predicted_train_df$forecast_prophet.ds ,y=predicted_train_df$forecast_prophet.yhat), size = 0.3, colour="black")+
+    labs(x = "Date",
+         y = "Total Index Return",
+         color = "Legend") +     ## Notice that this graph can be improved apon severely by including legends
+    scale_color_manual(values = colors)+
+  ggtitle("")
 g
 
-```
-
-To make your graphs look extra nice in latex world, you could use Tikz device. Replace dev - 'png' with 'tikz' in the chunk below. Notice this makes the build time longer and produces extra tex files - so if you are comfortable with this, set your device to Tikz and try it out:
-
-```{r Figure2, warning =  FALSE, fig.align = 'center', fig.cap = "Caption Here \\label{Figure2}", fig.height = 3, fig.width = 6, dev = 'png'}
-
-ExampleData <- read_rds( "data/Example_data.rds")
-
-source("code/Example_Plot_Scatter.R") # Load a function from your 'code' folder. This e.g. plots scatters to your own preferences.
-source( "code/Data_Create.R") #
-
-ExampleData <- Data_Create(N = 100) # Same as the ExampleData loaded above - this is just a function to create the stored data.
-
-g <- Example_Plot_Scatter(DataInput = ExampleData,
-                          X = "Height_Score",
-                          Y = "Weight_Score",
-                          Z = "Agility_Score",
-                          Theme = theme_bw(), # run ?ggthemes for other themes.
-                          Title = "", # I prefer to use the caption set above.
-                          Ylab = "Height",
-                          Xlab = "Lenght",
-                          LegendTitle = "Agility",
-                          TitleSize = 10,
-                          LabSize = 10)
-
-g
-
-# Although the functions above are really simple, the principle is simple: containing calculations and data wrangling in their own functions will make this template much cleaner and more manageable.
-# When you start working, delete these meaningless functions and replace with your own...
 
 ```
 
-To reference the plot above, add a ``\\label'' after the caption in the chunk heading, as done above. Then reference the plot as such: As can be seen, Figures \ref{Figure1}  and \ref{Figure2} are excellent, with Figure \ref{Figure2} being particularly aesthetically pleasing due to its device setting of Tikz. The nice thing now is that it correctly numbers all your figures (and sections or tables) and will update if it moves. The links are also dynamic.
+```{r,  warning =  FALSE, fig.align = 'center', fig.cap = "Cross validation of Prophet components controlling for trend, weekly seasonality, and yearly seasonality.\\label{ProphetT}", fig.ext = 'png', fig.height = 3, fig.width = 5}
+#Here we investigate the accuracy of the predictions with cross validation
 
-I very strongly suggest using ggplot2 (ideally in combination with dplyr) using the ggtheme package to change the themes of your figures.
+accuracy_of_forecast<- accuracy(predicted_train_df$forecast_prophet.yhat,JSE_TOP40_df$y)
 
-Also note the information that I have placed above the chunks in the code chunks for the figures. You can edit any of these easily - visit the Rmarkdown webpage for more information.
-
-# Splitting a page
-
-You can also very easily split a page using built-in Pandoc formatting. I comment this out in the code (as this has caused issues building the pdf for some users - which I presume to be a Pandoc issue), but you are welcome to try it out yourself by commenting out the following section in your Rmd file.
+detrended_forecasts <- prophet_plot_components(prediction_prophet,forecast_prophet) #To have a clearer understanding of the data generating process, I plot the forecasted prophet components divided by a trend component, weekly seasonality and yearly seasonality.
 
 
-<!-- :::::: {.columns data-latex="[T]"} -->
-<!-- ::: {.column data-latex="{0.7\textwidth}"} -->
-<!-- ```{r, echo=FALSE, fig.width=4, fig.height=4} -->
-<!-- par(mar = c(4, 4, .2, .1)) -->
-<!-- plot(cars, pch = 19) -->
-<!-- ``` -->
-<!-- ::: -->
-<!-- ::: {.column data-latex="{0.05\textwidth}"} -->
-<!-- \ -->
-<!-- ::: -->
-<!-- ::: {.column data-latex="{0.2\textwidth}"} -->
-<!-- \scriptsize -->
+```
+The corresponding statistics reflecting the accuracy of the prediction are provided in table \ref{Propheta}. All of the goodness-of-fit statistics report that the Prophet predicted values are sufficiently accurate in predicting the actual observations. For ease of interpretation we consider the Mean Absolute Percentage Error (MAPE) of 4.631%, indicating that the actual and predicted value are off by 4.63%.^[The formula for the MAPE is given by: $(1/n) \sum_{t=1}^T|\frac{actual \ value-predicted \ value}{actual \ value}| \times 100.$]  
 
-<!-- ## Data {-} -->
-<!-- The figure on the left-hand side shows the `cars` data. -->
+```{r, results='asis'}
 
-<!-- Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do -->
-<!-- eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut -->
-<!-- enim ad minim veniam, quis nostrud exercitation ullamco laboris -->
-<!-- nisi ut aliquip ex ea commodo consequat. -->
-<!-- ::: -->
-<!-- :::::: -->
-
-
-
-#  Methodology \label{Meth}
-
-## Subsection
-Ideally do not overuse subsections. It equates to bad writing.^[This is an example of a footnote by the way. Something that should also not be overused.]
-
-## Math section
-
-Equations should be written as such:
-
-\begin{align}
-\beta = \sum_{i = 1}^{\infty}\frac{\alpha^2}{\sigma_{t-1}^2} \label{eq1} \\
-\int_{x = 1}^{\infty}x_{i} = 1 \notag
-\end{align}
-
-If you would like to see the equations as you type in Rmarkdown, use $ symbols instead (see this for yourself by adjusted the equation):
-
-$$
-\beta = \sum_{i = 1}^{\infty}\frac{\alpha^2}{\sigma_{t-1}^2} \\
-\int_{x = 1}^{\infty}x_{i} = 1
-$$
-
-Note again the reference to equation \ref{eq1}. Writing nice math requires practice. Note I used a forward slashes to make a space in the equations. I can also align equations using  __\&__, and set to numbering only the first line. Now I will have to type ``begin equation'' which is a native \LaTeX command. Here follows a more complicated equation:
-
-
-\begin{align}
-	y_t &= c + B(L) y_{t-1} + e_t   \label{eq2}    \\ \notag
-	e_t &= H_t^{1/2}  z_t ; \quad z_t \sim  N(0,I_N) \quad \& \quad H_t = D_tR_tD_t \\ \notag
-		D_t^2 &= {\sigma_{1,t}, \dots, \sigma_{N,t}}   \\ \notag
-		\sigma_{i,t}^2 &= \gamma_i+\kappa_{i,t}  v_{i, t-1}^2 +\eta_i  \sigma_{i, t-1}^2, \quad \forall i \\ \notag
-		R_{t, i, j} &= {diag(Q_{t, i, j}}^{-1}) . Q_{t, i, j} . diag(Q_{t, i, j}^{-1})  \\ \notag
-		Q_{t, i, j} &= (1-\alpha-\beta)  \bar{Q} + \alpha  z_t  z_t'  + \beta  Q_{t, i, j} \notag
-\end{align}
-
-Note that in \ref{eq2} I have aligned the equations by the equal signs. I also want only one tag, and I create spaces using ``quads''.
-
-See if you can figure out how to do complex math using the two examples provided in \ref{eq1} and \ref{eq2}.
-
-<!-- $$ -->
-<!-- This is a commented out section in the writing part. -->
-<!-- Comments are created by highlighting text, amnd pressing CTL+C -->
-<!-- \\begin{align} -->
-<!-- \\beta = \\alpha^2 -->
-<!-- \end{align} -->
-<!-- $$ -->
-
-# Results
-
-Tables can be included as follows. Use the _xtable_ (or kable) package for tables. Table placement = H implies Latex tries to place the table Here, and not on a new page (there are, however, very many ways to skin this cat. Luckily there are many forums online!).
-
-
-```{r ShortTable, results = 'asis'}
-
-library(xtable)
-data <- mtcars[1:5,] %>% tibble::as_tibble()
-
-table <- xtable(data, caption = "Short Table Example \\label{tab1}")
-  print.xtable(table,
-             # tabular.environment = "longtable",
-             floating = TRUE,
-             table.placement = 'H',
-             # scalebox = 0.3,
-             comment = FALSE,
-             caption.placement = 'bottom'
-             )
+knitr::kable(accuracy_of_forecast, align = 'c', digits = 3, format = "latex",
+      caption = 'Goodness of fit statistics reflecting the accuracy of the Prophet model forecasts. \\label{Propheta}', booktabs=T, escape=F) |> kable_styling(full_width = T)
 
 ```
 
-To reference calculations __in text__, _do this:_ From table \ref{tab1} we see the average value of mpg is `r mean(mtcars[1:5,]$mpg)`.
+# The K-Nearest Neighbours (KNN) Algorithm 
 
-Including tables that span across pages, use the following (note that I add below the table: ``continue on the next page''). This is a neat way of splitting your table across a page.
+The K-Nearest Neighbours (KNN) algorithm is a supervised machine learning algorithm first introduced by @keller1985. The algorithm applies a method of classifying data to estimate the likelihood that a data point will become a member of one group or another depending on the group to which the data points nearest to it belong (the training set). In this section, our primary objective is to forecast values for the JSE Top 40 index through a KNN experimental approach and compare its forecast accuracy with the other models adopted.
 
-Use the following default settings to build your own possibly long tables. Note that the following will fit on one page if it can, but cleanly spreads over multiple pages:
+The following 500 values forecasted are shown in figure \ref{KNN}. The number of parameters in the KNN regression is set to 100 because this project focuses on comparing different projection models rather than deducing the actual movement of stock prices. Furthermore, the lags are selected based on the AIC, and recursive methods are applied as the multiple-step ahead strategy.^[See @taunk2019 for a detailed description of the intricacies surrounding the KNN algorithm.]
 
-```{r LongTable, results = 'asis'}
-
-library(xtable)
-
-data = mtcars %>% tibble::as_tibble()
-  addtorow          <- list()
-  addtorow$pos      <- list()
-  addtorow$pos[[1]] <- c(0)
-  addtorow$command  <- c(paste("\\hline \n",
-                               "\\endhead \n",
-                               "\\hline \n",
-                               "{\\footnotesize Continued on next page} \n",
-                               "\\endfoot \n",
-                               "\\endlastfoot \n",sep=""))
-table <- xtable(data, caption = "Long Table Example")
-  print.xtable(table,
-             tabular.environment = "longtable",
-             floating = FALSE, # Leave this as is.
-             table.placement = 'H', # Leave this as is.
-             booktabs = T, # Aesthetics
-             include.rownames = FALSE,  # Typically you don't want this in a table.
-             add.to.row = addtorow, # For adding the Continued on next page part...
-             comment = FALSE,
-             caption.placement = 'top',  # Where do you want the caption?
-             size="\\fontsize{12pt}{13pt}\\selectfont"  # Size of text in table..
-             )
-# See https://cran.r-project.org/web/packages/xtable/vignettes/xtableGallery.pdf for table inspiration
-```
-
-\hfill
-
-<!-- hfill can be used to create a space, like here between text and table. -->
+```{r,  warning =  FALSE, fig.align = 'center', fig.cap = "Forecasted JSE Top 40 index using the k-nearest neigbours algorithm.\\label{KNN}", fig.ext = 'png', fig.height = 3, fig.width = 5}
 
 
-## Huxtable
+# Remember here to justify the selection of the k-value, the lags, as well as the msas. # Do so by comparing the RMSE, MAE, and the MAPE values for different specifications. 
 
-Huxtable is a very nice package for making working with tables between Rmarkdown and Tex easier.
+KNN_prediction <- knn_forecasting(JSE_TOP40_df$y, h = 500 , lags = 1:30, k = 30, msas = "MIMO" ) 
 
-This cost some adjustment to the Tex templates to make it work, but it now works nicely.
+#'h is the number of values to forecast'. 'k' is the parameter in the KNN regression. 'lags' is the order of lags used in the AR process. 'msas' is a string indicating the Multiple-Step Ahead Strategy used when more than one value is predicted. It can be "recursive" or "MIMO" (the default). 
 
-See documentation for this package [here](https://hughjonesd.github.io/huxtable/huxtable.html). A particularly nice addition of this package is for making the printing of regression results a joy (see [here](https://hughjonesd.github.io/huxtable/huxtable.html#creating-a-regression-table)). Here follows an example:
+#Accuracy of the model's training  set 
 
+rolling_origin <- rolling_origin(KNN_prediction)
 
-If you are eager to use huxtable, comment out the Huxtable table in the Rmd template, and uncomment the colortbl package in your Rmd's root.
+#print(rolling_origin$global_accu)  # Provides the RMSE, MAE and the MAPE
 
-Note that I do not include this in the ordinary template, as some latex users have complained it breaks when they build their Rmds (especially those using tidytex - I don't have this problem as I have the full Miktex installed on mine). Up to you, but I strongly recommend installing the package manually and using huxtable. To make this work, uncomment the _Adding additional latex packages_ part in yaml at the top of the Rmd file. Then comment out the huxtable example in the template below this line. Reknit, and enjoy.
-
-```{r, results = 'asis'}
-
-if(!require(huxtable)) install.packages(huxtable)
-library(huxtable)
-data(diamonds, package = 'ggplot2')
-Title <- "Regression Output"
-Label <- "Reg01"
-lm1 <- lm(price ~ carat, diamonds)
-lm2 <- lm(price ~ depth, diamonds)
-lm3 <- lm(price ~ carat + depth, diamonds)
-htab <-
-huxreg(lm1, lm2, lm3,
-                statistics = c(N = "nobs", R2 = "r.squared"),
-                note = "%stars%.") %>%
-  set_caption(Title) %>%
-  set_label(Label)
-# More settings:
-font_size(htab) <- 12
-# Let's change regression names: this is slightly hacky, but works. Comment out this section to see what the default looks like:
-  Names <- c( "Reg1", "Reg2", "Reg3")
-  for(i in 1:length(Names)) {
-    htab[1,][[1+i]] <- Names[i]
-  }
-# Now simply call the table:
-htab
+autoplot(KNN_prediction) +
+    labs(x = "Time", y = "Total Index Return")
 
 ```
 
-FYI - R also recently introduced the gt package, which is worthwhile exploring too.
+The forecasts depicted in figure \ref{KNN} indicate that the JSE Top 40 index will experience growth, with a marginally slight decline after two months that recovers rather quickly towards its stable growth path. The statistics that measure the accuracy of the prediction are given in table \ref{KNNa} below. Again, referring to the MAPE value of 6.95%, the projections fit the actual data sufficiently, with a 6.95% error between the predicted and actual values. However, this is a slightly worse fit than the predictions computed using the Prophet algorithm.
 
-# Lists
+```{r, results='asis'}
 
-To add lists, simply using the following notation
+knitr::kable(rolling_origin$global_accu, align = 'c', digits = 3, format = "latex",
+      caption = 'Goodness of fit statistics reflecting the accuracy of the KNN algorithms forecasts. \\label{KNNa}', booktabs=T, escape=F) |> kable_styling(full_width = T)
 
-* This is really simple
 
-    + Just note the spaces here - writing in R you have to sometimes be pedantic about spaces...
+```
 
-* Note that Rmarkdown notation removes the pain of defining \LaTeX environments!
+# The Feed-forward Neural Network (FNN)
+
+```{r, fig.cap = "The dynamics of the feed-forward neural network algorithm. \\label{image2}", out.width = "55%", fig.show = "hold", fig.align='center'}
+knitr::include_graphics("code/feed_forward.jpeg")
+```
+
+A single hidden layer feed-forward neural network (FNN) is the first and most straightforward kind of artificial neural network where connections between nodes do not form a loop or cycle [@sanger1989].  Consequently, the information only flows forward from the input nodes through the hidden nodes and to the output nodes. In its form considered here, only one layer of input nodes transmits weighted inputs to the next layer of receiving nodes.
+
+This section fits a single hidden layer FNN to the JSE Top 40 time series. Similar to the approach by @wang2014, the functional model involves using lagged values of the process as the input data, resulting in an estimated non-linear autoregressive model. 
+
+The specific number of hidden nodes is half the number of input nodes, including external independent variables, plus one. To ensure that the residuals will be approximately homoscedastic, the Box-Cox lambda approach is used. In figure \ref{FNN}, the following 500 values are forecasted with the neural net fitted and the number of lags selected based on the AIC. In contrast to the Prophet and KNN predictions, figure \ref{FNN} predicts that the JSE Top 40 index will experience a sharp decline until levelling off approximately three months later.
+
+```{r,  warning =  FALSE, fig.align = 'center', fig.cap = "Forecasted JSE Top 40 index using the feed-forward neural network.\\label{FNN}", fig.ext = 'png', fig.height = 3, fig.width = 5}
+
+
+#Fitting  the nnetar
+
+Lambda = BoxCox.lambda(JSE_Top40_xts$Price) 
+
+# I select the specific number of hidden nodes is half of the number of input nodes (including external regressors, if given) plus 1.
+# To ensure that the residuals will be approximately homoscedastic, a Box Cox lambda is approach is applied. I forecast the next 500 values with the neural net fitted. I then proceed to apply the nnetar function with the lambda assigned as parameters.
+
+FNN_fit = nnetar(JSE_Top40_xts$Price,lambda=Lambda)
+
+#FNN_fit # See the output results 
+
+FNN_forecast <-  forecast(FNN_fit,PI=T,h=500) # Forecast 500 periods (week days) ahead as in previous predictions.
+  
+autoplot(FNN_forecast)+
+    labs(x = "Time", y = "Total Index Return", title = "") # A completely opposite result to KNN forecast. 
+
+```
+
+The accuracy statistics are given in table \ref{FNNa} below. The MAPE of 0.95 is an improvement on both the Prophet and KNN predictions, indicating that the actual and forecasted values are off by 0.95%.
+
+```{r, Accuracy of FNN Forecast, results='asis'}
+
+acc_FNN<- accuracy(FNN_fit) # Interpreting the forecasts. 
+
+knitr::kable(acc_FNN, align = 'c', digits = 3, format = "latex",
+      caption = 'Goodness of fit statistics reflecting the accuracy of the FNN algorithms forecasts. \\label{FNNa}', booktabs=T, escape=F) |> kable_styling(full_width = T)
+
+
+```
 
 # Conclusion
 
-I hope you find this template useful. Remember, stackoverflow is your friend - use it to find answers to questions. Feel free to write me a mail if you have any questions regarding the use of this package. To cite this package, simply type citation("Texevier") in Rstudio to get the citation for @Texevier (Note that uncited references in your bibtex file will not be included in References).
+This study focused on applying different models, learning how to use them to forecast JSE Top 40 index values, and showcasing contrasting results. The Prophet and KNN algorithms predicted a price increase over the next 500 days, whereas the FNN algorithm a price decrease.
+
+All the models performed very well inside the prediction intervals and the accuracy metrics, with the FNN algorithm displaying the most accurate predictions. The KNN model did not serve as well as the Prophet and FNN models under our metrics. This could be because KNN may need more tuning phases, training, and testing approaches, or they are not as effective as the other models because they mainly use classificatory terms more than forecasting.
+
 
 <!-- Make title of bibliography here: -->
 <!-- \newpage -->
@@ -400,11 +304,5 @@ I hope you find this template useful. Remember, stackoverflow is your friend - u
 <div id="refs"></div>
 
 
-# Appendix {-}
 
-## Appendix A {-}
-
-Some appendix information here
-
-## Appendix B {-}
 
